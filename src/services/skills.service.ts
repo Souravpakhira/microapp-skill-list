@@ -6,17 +6,18 @@ import { CreateSkillDto } from '@/dtos/skill.dts';
 class SkillService {
   public skill = new PrismaClient().skills;
   public domain = new PrismaClient().domainMaster;
+  public prisma = new PrismaClient();
 
   public async findAllSkills(): Promise<Skills[]> {
     const allDomain: Skills[] = await this.skill.findMany({
       where: {
-        deletedAt:null
+        deletedAt: null
       },
-      orderBy:{
-        createdAt:'desc'
+      orderBy: {
+        createdAt: 'desc'
       },
-      include:{
-        DomainMaster:true
+      include: {
+        DomainMaster: true
       }
     });
     return allDomain;
@@ -25,20 +26,20 @@ class SkillService {
   public async findSkillByDomainId(domainId: number): Promise<any> {
     if (isEmpty(domainId)) throw new HttpException(400, "Domain Id is empty");
 
-    const findDomain = await this.domain.findMany({where:{id:domainId},include:{skills:true}})
+    const findDomain = await this.domain.findMany({ where: { id: domainId }, include: { skills: true } })
     if (!findDomain) throw new HttpException(409, "Domain doesn't exist");
 
     return findDomain;
   }
 
-  public async searchSkill(domainId: number,search:string): Promise<any> {
+  public async searchSkill(domainId: number, search: string): Promise<any> {
     if (isEmpty(domainId)) throw new HttpException(400, "Domain Id is empty");
 
     const findDomain = await this.skill.findFirst({
       where: {
         AND: {
           domainMasterId: domainId,
-          name: {contains:search}
+          name: { contains: search }
         }
       }
     })
@@ -50,7 +51,12 @@ class SkillService {
   public async createSkill(skillData: Array<CreateSkillDto>): Promise<any> {
     if (isEmpty(skillData)) throw new HttpException(400, "skillData is empty");
 
-    const createSkillData:Prisma.BatchPayload = await this.skill.createMany({ data: skillData });
+    // const createSkillData:Prisma.BatchPayload = await this.skill.createMany({ data: skillData });
+
+    const createSkillData = this.prisma.$transaction(
+      skillData.map((skill) => this.skill.create({ data: skill })),
+    );
+
     return createSkillData;
   }
 
@@ -70,7 +76,7 @@ class SkillService {
     const findSkill: Skills = await this.skill.findUnique({ where: { id: skillId } });
     if (!findSkill) throw new HttpException(409, "Skill doesn't exist");
 
-    const deleteSkillData = await this.skill.update({ where: { id: skillId },data: {...findSkill,deletedAt: new Date()} });
+    const deleteSkillData = await this.skill.update({ where: { id: skillId }, data: { ...findSkill, deletedAt: new Date() } });
     return deleteSkillData;
   }
 }

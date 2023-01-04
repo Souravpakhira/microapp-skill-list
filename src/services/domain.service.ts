@@ -7,7 +7,7 @@ class DomainService {
   public domain = new PrismaClient().domainMaster;
 
   public async findAllDomain(): Promise<DomainMaster[]> {
-    const allDomain = await this.domain.findMany({where:{deletedAt:null}});
+    const allDomain = await this.domain.findMany({ where: { deletedAt: null } });
     return allDomain;
   }
 
@@ -23,7 +23,14 @@ class DomainService {
   public async createDomain(domainData: CreateDomainDto): Promise<DomainMaster> {
     if (isEmpty(domainData)) throw new HttpException(400, "domainData is empty");
 
-    const findDomain: DomainMaster = await this.domain.findFirst({ where: { name: domainData.name } });
+    const findDomain: DomainMaster = await this.domain.findFirst({
+      where: {
+        AND: {
+          name: domainData.name,
+          deletedAt: null
+        }
+      }
+    });
     if (findDomain) throw new HttpException(409, `This ${domainData.name} already exists`);
 
     const createDomainData: DomainMaster = await this.domain.create({ data: { ...domainData } });
